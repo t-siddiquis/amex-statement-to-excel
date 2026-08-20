@@ -181,6 +181,12 @@
     const allLines = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      // Decoding the page's embedded scan image (often a large CCITT-fax
+      // bitmap from an office scanner/copier) is frequently the slowest
+      // single step here -- slower than the OCR pass itself -- and pdf.js
+      // gives no incremental progress for it. Report a "rendering" phase up
+      // front so the UI doesn't look stalled while this runs.
+      if (onProgress) onProgress({ page: pageNum, numPages: pdf.numPages, phase: "rendering" });
       const page = await pdf.getPage(pageNum);
       const canvas = await renderPageToCanvas(page, OCR_SCALE);
 
@@ -188,7 +194,7 @@
       binarizeCanvas(canvas);
 
       activeProgressHandler = (m) => {
-        if (onProgress) onProgress({ page: pageNum, numPages: pdf.numPages, tesseract: m });
+        if (onProgress) onProgress({ page: pageNum, numPages: pdf.numPages, phase: "ocr", tesseract: m });
       };
       let data;
       try {
@@ -353,7 +359,11 @@
 
   function attachCategories(rawTexts, transactions) {
     // Rebuild a pointer walk: find each transaction's originating line index
-    // by re-scanning with the same state logic, then check the next line.
+    // by re-scanning with the same state logic, then collect every following
+    // detail line (e.g. plain "専門店/通信販売" category tags, but also
+    // multi-line entries like ETC highway tolls, which add an ETC card
+    // number line plus separate entry/exit location lines) up to the next
+    // transaction, section boundary, or total.
     let collecting = false;
     let txCursor = 0;
     for (let i = 0; i < rawTexts.length; i++) {
@@ -362,15 +372,14 @@
       if (RE_SECTION_START.test(text)) { collecting = true; continue; }
       if (!collecting) continue;
       if (RE_DATE.test(text) && extractLastNumber(text)) {
-        const next = rawTexts[i + 1];
-        if (
-          next &&
-          !RE_DATE.test(next) &&
-          !next.includes("合計") &&
-          !RE_SECTION_START.test(next) &&
-          !extractLastNumber(next)
-        ) {
-          if (transactions[txCursor]) transactions[txCursor].category = next.trim();
+        const detailLines = [];
+        for (let j = i + 1; j < rawTexts.length; j++) {
+          const line = rawTexts[j];
+          if (RE_DATE.test(line) || line.includes("合計") || RE_SECTION_START.test(line) || extractLastNumber(line)) break;
+          detailLines.push(line.trim());
+        }
+        if (detailLines.length && transactions[txCursor]) {
+          transactions[txCursor].category = detailLines.join(" / ");
         }
         txCursor++;
       }

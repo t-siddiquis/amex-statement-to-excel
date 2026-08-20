@@ -209,7 +209,9 @@
       const lines = await window.AmexParser.extractLinesFromPdf(buf, {
         onProgress: (info) => {
           const overall = ((info.page - 1) + (info.tesseract && info.tesseract.progress || 0)) / info.numPages;
-          const statusJa = (info.tesseract && TESSERACT_STATUS_JA[info.tesseract.status]) || "処理中";
+          const statusJa = info.phase === "rendering"
+            ? "ページを画像化中"
+            : (info.tesseract && TESSERACT_STATUS_JA[info.tesseract.status]) || "処理中";
           updateFileProgress(file.name, overall, `${statusJa}...（ページ ${info.page}/${info.numPages}）`);
         },
       });
