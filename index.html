@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amex利用明細 → Excel変換ツール</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app-header">
+    <h1>Amex利用明細 → Excel変換ツール</h1>
+    <p class="lead">
+      アメリカン・エキスプレスの「ご利用代金明細書」PDFをアップロードすると、
+      取引明細を読み取ってExcel形式で一覧にまとめます。
+    </p>
+    <p class="privacy-note">
+      🔒 このツールはブラウザ内だけで動作します。アップロードしたPDFやその内容は、
+      サーバーやインターネットへ送信されません。すべての処理はお使いの端末内で完結します。
+    </p>
+    <p class="ocr-note">
+      ⏱ Amexの明細書PDFは文字情報を持たない画像として作成されているため、ブラウザ内蔵のOCR（文字認識）で読み取ります。
+      1ファイルにつき数十秒〜数分かかることがあります。処理中はこのタブを開いたままお待ちください。
+    </p>
+  </header>
+
+  <section class="card" id="upload-section">
+    <div id="dropzone" class="dropzone">
+      <p class="dz-main">ここにPDFをドラッグ&ドロップ</p>
+      <p class="dz-sub">複数ファイルをまとめて処理できます（例：数ヶ月分の明細書）</p>
+      <button type="button" id="pick-btn" class="btn btn-primary">ファイルを選択</button>
+      <input type="file" id="file-input" accept="application/pdf" multiple hidden>
+    </div>
+    <ul id="file-list" class="file-list"></ul>
+  </section>
+
+  <section class="card" id="results-section" hidden>
+    <div class="section-head">
+      <h2>読み取り結果</h2>
+      <div class="totals" id="totals-summary"></div>
+    </div>
+
+    <div class="table-toolbar">
+      <button type="button" id="add-row-btn" class="btn btn-ghost">＋ 行を追加</button>
+      <button type="button" id="reset-btn" class="btn btn-ghost">最初からやり直す</button>
+      <div class="spacer"></div>
+      <button type="button" id="export-btn" class="btn btn-primary" disabled>📊 Excelをダウンロード</button>
+    </div>
+
+    <p class="edit-hint">セルはクリックして直接編集できます。行頭の「✕」で削除、金額の見出し行は自動集計されます。</p>
+
+    <div class="table-scroll">
+      <table id="tx-table">
+        <thead>
+          <tr>
+            <th class="col-del"></th>
+            <th class="col-date">日付</th>
+            <th class="col-holder">利用者</th>
+            <th class="col-merchant">利用先</th>
+            <th class="col-category">カテゴリ</th>
+            <th class="col-amount">金額（円）</th>
+            <th class="col-source">明細書</th>
+          </tr>
+        </thead>
+        <tbody id="tx-tbody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5" class="footer-label">合計</td>
+            <td id="footer-total" class="col-amount"></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <p>対応形式: アメリカン・エキスプレス発行の「ご利用代金明細書」（個人カード・法人カード・追加カード対応）。
+      PDFのレイアウトはカード種別により差異があるため、取り込み後は必ず内容と合計金額をご確認ください。</p>
+  </footer>
+
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="vendor/tesseract/tesseract.min.js"></script>
+<script src="vendor/xlsx/xlsx.full.min.js"></script>
+<script src="parser.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
